@@ -10,8 +10,8 @@ from hydra.core.singleton import Singleton
 from hydra.core.utils import JobReturn, configure_log, filter_overrides, setup_globals
 from omegaconf import Node, OmegaConf, open_dict, read_write
 
-from ._launcher_util import JOB_RETURN_PICKLE, JOB_SPEC_PICKLE, ray_tmp_dir, rsync
-from .ray_aws_launcher import RayAWSLauncher
+from hydra_plugins.hydra_ray_launcher._launcher_util import JOB_RETURN_PICKLE, JOB_SPEC_PICKLE, ray_tmp_dir, rsync
+from hydra_plugins.hydra_ray_launcher.ray_aws_launcher import RayAWSLauncher
 
 try:
     import pickle5 as pickle  # type: ignore

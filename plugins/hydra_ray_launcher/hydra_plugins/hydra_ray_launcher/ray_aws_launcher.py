@@ -7,7 +7,7 @@ from hydra.plugins.launcher import Launcher
 from hydra.types import HydraContext, TaskFunction
 from omegaconf import DictConfig
 
-from ._config import (
+from hydra_plugins.hydra_ray_launcher._config import (
     RayAWSConf,
     RayCreateOrUpdateClusterConf,
     RayLoggingConf,

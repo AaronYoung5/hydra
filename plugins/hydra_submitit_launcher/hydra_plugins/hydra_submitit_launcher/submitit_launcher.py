@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 
 class BaseSubmititLauncher(Launcher):
+
     _EXECUTOR = "abstract"
 
     def __init__(self, **params: Any) -> None:
@@ -43,14 +44,23 @@ class BaseSubmititLauncher(Launcher):
 
     def __call__(
         self,
-        sweep_overrides: List[str],
-        job_dir_key: str,
-        job_num: int,
-        job_id: str,
-        singleton_state: Dict[type, Singleton],
+        sweep_overrides: List[List[str]],
+        job_dir_keys: List[str],
+        job_nums: List[int],
+        job_ids: List[str],
+        singleton_states: List[Dict[type, Singleton]],
     ) -> JobReturn:
         # lazy import to ensure plugin discovery remains fast
         import submitit
+
+        job_env = submitit.JobEnvironment()
+
+        rank = job_env.local_rank
+        sweep_overrides = sweep_overrides[rank]
+        job_dir_key = job_dir_keys[rank]
+        job_num = job_nums[rank]
+        job_id = job_ids[rank]
+        singleton_state = singleton_states[rank]
 
         assert self.hydra_context is not None
         assert self.config is not None
@@ -64,8 +74,8 @@ class BaseSubmititLauncher(Launcher):
 
         with open_dict(sweep_config.hydra.job) as job:
             # Populate new job variables
-            job.id = submitit.JobEnvironment().job_id  # type: ignore
-            sweep_config.hydra.job.num = job_num
+            job.id = job_env.job_id
+            sweep_config.hydra.job.num = job_num # type: ignore
 
         return run_job(
             hydra_context=self.hydra_context,
@@ -104,7 +114,7 @@ class BaseSubmititLauncher(Launcher):
                 if x in specific_init_keys
             }
         )
-        init_keys = specific_init_keys | {"submitit_folder"}
+        init_keys = specific_init_keys | {"submitit_folder", "batch_runs"}
         executor = submitit.AutoExecutor(cluster=self._EXECUTOR, **init_params)
 
         # specify resources/parameters
@@ -140,9 +150,21 @@ class BaseSubmititLauncher(Launcher):
                     Singleton.get_state(),
                 )
             )
+        
+        if self.params["batch_runs"]:
+            batch = self.params["tasks_per_node"]
+            assert len(job_params) % batch == 0, (
+                f"Number of jobs ({len(job_params)}) must be divisible by "
+                f"tasks_per_node ({batch})"
+            )
 
-        jobs = executor.map_array(self, *zip(*job_params))
-        return [j.results()[0] for j in jobs]
+            # Split up the job params into batches
+            job_params = [list(zip(*[iter(col)] * batch)) for col in zip(*job_params)]
+        else:
+            job_params = [[col] for col in zip(*job_params)]
+
+        jobs = executor.map_array(self, *job_params)
+        return [r for j in jobs for r in j.results()]
 
 
 class LocalLauncher(BaseSubmititLauncher):

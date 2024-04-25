@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from hydra.core.config_store import ConfigStore
 
@@ -81,6 +81,13 @@ class NevergradSweeperConf:
     # - as a list, for categorical variables
     # - as a full scalar specification
     parametrization: Dict[str, Any] = field(default_factory=dict)
+
+    # Define cheap constraints configuration via Python methods.
+    # If given, `cheap_constraints` should be a list of callables with the signature
+    # Callable[[Dict[str, Any]], float | bool]. The input dict is the parameterization 
+    # of the trial.
+    # https://facebookresearch.github.io/nevergrad/optimization.html#optimization-with-constraints
+    cheap_constraints: List[Any] = field(default_factory=list)
 
 
 ConfigStore.instance().store(

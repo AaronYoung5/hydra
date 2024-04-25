@@ -10,6 +10,7 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    Callable,
 )
 
 import nevergrad as ng
@@ -87,6 +88,7 @@ class NevergradSweeperImpl(Sweeper):
         self,
         optim: OptimConf,
         parametrization: Optional[DictConfig],
+        cheap_constraints: Optional[ListConfig],
     ):
         self.opt_config = optim
         self.config: Optional[DictConfig] = None
@@ -100,6 +102,10 @@ class NevergradSweeperImpl(Sweeper):
                 str(x): create_nevergrad_param_from_config(y)
                 for x, y in parametrization.items()
             }
+        self.cheap_constraints: List[Callable[[Dict[str, Any], Union[bool, float]]]] = []
+        if cheap_constraints is not None:
+            for constraint in cheap_constraints:
+                self.cheap_constraints.append(constraint)
         self.job_idx: Optional[int] = None
 
     def setup(
@@ -134,6 +140,8 @@ class NevergradSweeperImpl(Sweeper):
             )
 
         parametrization = ng.p.Dict(**params)
+        for constraint in self.cheap_constraints:
+            parametrization.register_cheap_constraint(constraint)
         parametrization.function.deterministic = not self.opt_config.noisy
         parametrization.random_state.seed(self.opt_config.seed)
         # log and build the optimizer
@@ -144,7 +152,7 @@ class NevergradSweeperImpl(Sweeper):
             f"NevergradSweeper(optimizer={opt}, budget={remaining_budget}, "
             f"num_workers={nw}) {name}"
         )
-        log.info(f"with parametrization {parametrization}")
+        log.info(f"with parameterization {parametrization}")
         log.info(f"Sweep output dir: {self.config.hydra.sweep.dir}")
         optimizer = ng.optimizers.registry[opt](parametrization, remaining_budget, nw)
         # loop!

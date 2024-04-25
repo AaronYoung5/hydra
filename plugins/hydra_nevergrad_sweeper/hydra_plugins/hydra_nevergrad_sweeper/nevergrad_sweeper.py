@@ -4,7 +4,7 @@ from typing import List, Optional
 from hydra import TaskFunction
 from hydra.plugins.sweeper import Sweeper
 from hydra.types import HydraContext
-from omegaconf import DictConfig
+from omegaconf import DictConfig, ListConfig
 
 from .config import OptimConf
 
@@ -12,10 +12,10 @@ from .config import OptimConf
 class NevergradSweeper(Sweeper):
     """Class to interface with Nevergrad"""
 
-    def __init__(self, optim: OptimConf, parametrization: Optional[DictConfig]):
+    def __init__(self, optim: OptimConf, parametrization: Optional[DictConfig], cheap_constraints: Optional[ListConfig]):
         from ._impl import NevergradSweeperImpl
 
-        self.sweeper = NevergradSweeperImpl(optim, parametrization)
+        self.sweeper = NevergradSweeperImpl(optim, parametrization, cheap_constraints)
 
     def setup(
         self,

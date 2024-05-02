@@ -28,7 +28,7 @@ from hydra.plugins.sweeper import Sweeper
 from hydra.types import HydraContext, TaskFunction
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-from .config import OptimConf, ScalarConfigSpec
+from .config import OptimConf, ScalarOrArrayConfigSpec
 
 log = logging.getLogger(__name__)
 
@@ -41,21 +41,27 @@ def create_nevergrad_param_from_config(
             config = OmegaConf.to_container(config, resolve=True)  # type: ignore
         return ng.p.Choice(config)
     if isinstance(config, MutableMapping):
-        specs = ScalarConfigSpec(**config)
+        specs = ScalarOrArrayConfigSpec(**config)
         init = ["init", "lower", "upper"]
         init_params = {x: getattr(specs, x) for x in init}
-        if not specs.log:
-            scalar = ng.p.Scalar(**init_params)
+
+        if specs.shape or isinstance(init_params["init"], ListConfig):
+            if specs.shape:
+                init_params["shape"] = OmegaConf.to_container(specs.shape)
+            parameter = ng.p.Array(**init_params)
             if specs.step is not None:
-                scalar.set_mutation(sigma=specs.step)
+                parameter.set_mutation(sigma=specs.step)
+        elif not specs.log:
+            parameter = ng.p.Scalar(**init_params)
+            if specs.step is not None:
+                parameter.set_mutation(sigma=specs.step)
         else:
             if specs.step is not None:
                 init_params["exponent"] = specs.step
-            scalar = ng.p.Log(**init_params)
+            parameter = ng.p.Log(**init_params)
         if specs.integer:
-            scalar.set_integer_casting()
-        return scalar
-    return config
+            parameter.set_integer_casting()
+        return parameter
 
 
 def create_nevergrad_parameter_from_override(override: Override) -> Any:
@@ -102,7 +108,9 @@ class NevergradSweeperImpl(Sweeper):
                 str(x): create_nevergrad_param_from_config(y)
                 for x, y in parametrization.items()
             }
-        self.cheap_constraints: List[Callable[[Dict[str, Any], Union[bool, float]]]] = []
+        self.cheap_constraints: List[Callable[[Dict[str, Any], Union[bool, float]]]] = (
+            []
+        )
         if cheap_constraints is not None:
             for constraint in cheap_constraints:
                 self.cheap_constraints.append(constraint)
@@ -163,7 +171,11 @@ class NevergradSweeperImpl(Sweeper):
             remaining_budget -= batch
             candidates = [optimizer.ask() for _ in range(batch)]
             overrides = list(
-                tuple(f"{x}={y}" for x, y in c.value.items()) for c in candidates
+                tuple(
+                    f"{x}={y.tolist() if type(y).__name__ == 'ndarray' else y}"
+                    for x, y in c.value.items()
+                )
+                for c in candidates
             )
             self.validate_batch_is_legal(overrides)
             returns = self.launcher.launch(overrides, initial_job_idx=self.job_idx)

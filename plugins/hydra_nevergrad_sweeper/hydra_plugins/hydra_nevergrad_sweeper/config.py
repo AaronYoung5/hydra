@@ -1,36 +1,40 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple
 
 from hydra.core.config_store import ConfigStore
 
 
 @dataclass
-class ScalarConfigSpec:
+class ScalarOrArrayConfigSpec:
     """Representation of all the options to define
     a scalar.
     """
 
     # lower bound if any
-    lower: Optional[float] = None
+    lower: Optional[float | List[float]] = None
 
     # upper bound if any
-    upper: Optional[float] = None
+    upper: Optional[float | List[float]] = None
 
     # initial value
     # default to the middle point if completely bounded
-    init: Optional[float] = None
+    init: Optional[float | List[float]] = None
 
     # step size for an update
     # defaults to 1 if unbounded
     # or 1/6 of the range if completely bounded
-    step: Optional[float] = None
+    step: Optional[float | List[float]] = None
 
     # cast to integer
     integer: bool = False
 
     # logarithmically distributed
+    # unused if array
     log: bool = False
+
+    # shape of the array
+    shape: Optional[Tuple[int]] = None
 
 
 @dataclass

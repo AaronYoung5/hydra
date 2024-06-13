@@ -35,14 +35,16 @@ from hydra.plugins.launcher import Launcher
 from hydra.plugins.sweeper import Sweeper
 from hydra.types import HydraContext, TaskFunction
 
+@dataclass
+class OptimConf:
+    max_batch_size: Optional[int] = None
 
 @dataclass
 class BasicSweeperConf:
     _target_: str = "hydra._internal.core_plugins.basic_sweeper.BasicSweeper"
-    max_batch_size: Optional[int] = None
     params: Optional[Dict[str, str]] = None
 
-    optim: Optional[Dict[str, Any]] = None
+    optim: Optional[OptimConf] = None
 
 
 ConfigStore.instance().store(
@@ -59,9 +61,9 @@ class BasicSweeper(Sweeper):
     """
 
     def __init__(
-        self, max_batch_size: Optional[int], 
+        self, 
         params: Optional[Dict[str, str]] = None, 
-        **_: Any
+        optim: Optional[OptimConf] = None,
     ) -> None:
         """
         Instantiates
@@ -72,7 +74,7 @@ class BasicSweeper(Sweeper):
             params = {}
         self.overrides: Optional[Sequence[Sequence[Sequence[str]]]] = None
         self.batch_index = 0
-        self.max_batch_size = max_batch_size
+        self.max_batch_size = optim.max_batch_size
         self.params = params
 
         self.hydra_context: Optional[HydraContext] = None

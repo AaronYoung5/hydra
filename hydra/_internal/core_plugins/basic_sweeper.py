@@ -42,6 +42,8 @@ class BasicSweeperConf:
     max_batch_size: Optional[int] = None
     params: Optional[Dict[str, str]] = None
 
+    optim: Optional[Dict[str, Any]] = None
+
 
 ConfigStore.instance().store(
     group="hydra/sweeper", name="basic", node=BasicSweeperConf, provider="hydra"
@@ -57,7 +59,9 @@ class BasicSweeper(Sweeper):
     """
 
     def __init__(
-        self, max_batch_size: Optional[int], params: Optional[Dict[str, str]] = None
+        self, max_batch_size: Optional[int], 
+        params: Optional[Dict[str, str]] = None, 
+        **_: Any
     ) -> None:
         """
         Instantiates

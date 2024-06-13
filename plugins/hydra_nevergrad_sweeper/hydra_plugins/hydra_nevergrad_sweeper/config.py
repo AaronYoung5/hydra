@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple, Callable
 
 from hydra.core.config_store import ConfigStore
 
@@ -36,6 +36,18 @@ class ScalarOrArrayConfigSpec:
     # shape of the array
     shape: Optional[Tuple[int]] = None
 
+@dataclass
+class CallbackConfigSpec:
+    """Representation of all the options to define a callback.
+    """
+
+    # name of the callback. either "ask" or "tell"
+    name: str
+
+    # callback function
+    # Actual type: Callable[[ng.optimizers.base.Optimizers], None]
+    callback: Any
+
 
 @dataclass
 class OptimConf:
@@ -69,6 +81,17 @@ class OptimConf:
     # maximum authorized failure rate for a batch of parameters
     max_failure_rate: float = 0.0
 
+    # Define cheap constraints configuration via Python methods.
+    # If given, `cheap_constraints` should be a list of callables with the signature
+    # Callable[[Dict[str, Any]], float | bool]. The input dict is the parameterization 
+    # of the trial.
+    # https://facebookresearch.github.io/nevergrad/optimization.html#optimization-with-constraints
+    cheap_constraints: List[Any] = field(default_factory=list)
+
+    # These are callbacks that are passed to the optimizer via the `register_callback`
+    # method. See the Nevergrad documentation for more information.
+    # https://facebookresearch.github.io/nevergrad/optimizers_ref.html#nevergrad.optimizers.base.Optimizer.register_callback
+    callbacks: List[CallbackConfigSpec] = field(default_factory=list)
 
 @dataclass
 class NevergradSweeperConf:
@@ -84,14 +107,7 @@ class NevergradSweeperConf:
     # - as a string, like commandline arguments
     # - as a list, for categorical variables
     # - as a full scalar specification
-    parametrization: Dict[str, Any] = field(default_factory=dict)
-
-    # Define cheap constraints configuration via Python methods.
-    # If given, `cheap_constraints` should be a list of callables with the signature
-    # Callable[[Dict[str, Any]], float | bool]. The input dict is the parameterization 
-    # of the trial.
-    # https://facebookresearch.github.io/nevergrad/optimization.html#optimization-with-constraints
-    cheap_constraints: List[Any] = field(default_factory=list)
+    params: Dict[str, Any] = field(default_factory=dict)
 
 
 ConfigStore.instance().store(

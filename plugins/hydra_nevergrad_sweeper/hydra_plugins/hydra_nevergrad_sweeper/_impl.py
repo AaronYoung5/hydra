@@ -93,26 +93,25 @@ class NevergradSweeperImpl(Sweeper):
     def __init__(
         self,
         optim: OptimConf,
-        parametrization: Optional[DictConfig],
-        cheap_constraints: Optional[ListConfig],
+        params: Optional[DictConfig]
     ):
         self.opt_config = optim
         self.config: Optional[DictConfig] = None
         self.launcher: Optional[Launcher] = None
         self.hydra_context: Optional[HydraContext] = None
         self.job_results = None
-        self.parametrization: Dict[str, Any] = {}
-        if parametrization is not None:
-            assert isinstance(parametrization, DictConfig)
-            self.parametrization = {
+        self.params: Dict[str, Any] = {}
+        if params is not None:
+            assert isinstance(params, DictConfig)
+            self.params = {
                 str(x): create_nevergrad_param_from_config(y)
-                for x, y in parametrization.items()
+                for x, y in params.items()
             }
         self.cheap_constraints: List[Callable[[Dict[str, Any], Union[bool, float]]]] = (
             []
         )
-        if cheap_constraints is not None:
-            for constraint in cheap_constraints:
+        if optim.cheap_constraints is not None:
+            for constraint in optim.cheap_constraints:
                 self.cheap_constraints.append(constraint)
         self.job_idx: Optional[int] = None
 
@@ -136,8 +135,8 @@ class NevergradSweeperImpl(Sweeper):
         assert self.job_idx is not None
         direction = -1 if self.opt_config.maximize else 1
         name = "maximization" if self.opt_config.maximize else "minimization"
-        # Override the parametrization from commandline
-        params = dict(self.parametrization)
+        # Override the params from commandline
+        params = dict(self.params)
 
         parser = OverridesParser.create()
         parsed = parser.parse_overrides(arguments)
@@ -147,11 +146,11 @@ class NevergradSweeperImpl(Sweeper):
                 create_nevergrad_parameter_from_override(override)
             )
 
-        parametrization = ng.p.Dict(**params)
+        params = ng.p.Dict(**params)
         for constraint in self.cheap_constraints:
-            parametrization.register_cheap_constraint(constraint)
-        parametrization.function.deterministic = not self.opt_config.noisy
-        parametrization.random_state.seed(self.opt_config.seed)
+            params.register_cheap_constraint(constraint)
+        params.function.deterministic = not self.opt_config.noisy
+        params.random_state.seed(self.opt_config.seed)
         # log and build the optimizer
         opt = self.opt_config.optimizer
         remaining_budget = self.opt_config.budget
@@ -160,12 +159,14 @@ class NevergradSweeperImpl(Sweeper):
             f"NevergradSweeper(optimizer={opt}, budget={remaining_budget}, "
             f"num_workers={nw}) {name}"
         )
-        log.info(f"with parameterization {parametrization}")
+        log.info(f"with parameterization {params}")
         log.info(f"Sweep output dir: {self.config.hydra.sweep.dir}")
-        optimizer = ng.optimizers.registry[opt](parametrization, remaining_budget, nw)
+        optimizer = ng.optimizers.registry[opt](params, remaining_budget, nw)
+        for callback_spec in self.opt_config.callbacks:
+            optimizer.register_callback(callback_spec.name, callback_spec.callback)
         # loop!
         all_returns: List[Any] = []
-        best: Tuple[float, ng.p.Parameter] = (float("inf"), parametrization)
+        best: Tuple[float, ng.p.Parameter] = (float("inf"), params)
         while remaining_budget > 0:
             batch = min(nw, remaining_budget)
             remaining_budget -= batch

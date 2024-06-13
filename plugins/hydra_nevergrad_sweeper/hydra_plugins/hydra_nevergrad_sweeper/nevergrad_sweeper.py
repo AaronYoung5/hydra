@@ -12,10 +12,13 @@ from .config import OptimConf
 class NevergradSweeper(Sweeper):
     """Class to interface with Nevergrad"""
 
-    def __init__(self, optim: OptimConf, parametrization: Optional[DictConfig], cheap_constraints: Optional[ListConfig]):
+    def __init__(self, 
+        optim: OptimConf, 
+        params: Optional[DictConfig], 
+    ):
         from ._impl import NevergradSweeperImpl
 
-        self.sweeper = NevergradSweeperImpl(optim, parametrization, cheap_constraints)
+        self.sweeper = NevergradSweeperImpl(optim, params)
 
     def setup(
         self,

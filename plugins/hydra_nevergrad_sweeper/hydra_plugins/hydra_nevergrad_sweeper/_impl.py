@@ -141,10 +141,11 @@ class NevergradSweeperImpl(Sweeper):
         parser = OverridesParser.create()
         parsed = parser.parse_overrides(arguments)
 
+        params_overrides = []
         for override in parsed:
-            params[override.get_key_element()] = (
-                create_nevergrad_parameter_from_override(override)
-            )
+            override_key = override.get_key_element()
+            params[override_key] = create_nevergrad_parameter_from_override(override)
+            params_overrides.append(override_key)
 
         params = ng.p.Dict(**params)
         for constraint in self.cheap_constraints:
@@ -161,7 +162,14 @@ class NevergradSweeperImpl(Sweeper):
         )
         log.info(f"with parameterization {params}")
         log.info(f"Sweep output dir: {self.config.hydra.sweep.dir}")
-        optimizer = ng.optimizers.registry[opt](params, remaining_budget, nw)
+        if self.opt_config.load_if_exists is not None and self.opt_config.load_if_exists.exists():
+            optimizer = ng.optimizers.registry[opt].load(self.opt_config.load_if_exists)
+            log.info(f"Resuming nevergrad optimization from budget={optimizer.num_ask} or {remaining_budget}")
+            remaining_budget -= optimizer.num_ask
+            self.job_idx = optimizer.num_ask
+        else:
+            log.info(f"Initializing optimizer from scratch with budget={remaining_budget}")
+            optimizer = ng.optimizers.registry[opt](params, remaining_budget, nw)
         for callback_spec in self.opt_config.callbacks:
             optimizer.register_callback(callback_spec.name, callback_spec.callback)
         # loop!

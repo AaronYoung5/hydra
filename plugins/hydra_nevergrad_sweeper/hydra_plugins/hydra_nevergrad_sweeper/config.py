@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, List, Tuple, Callable
+from typing import Any, Dict, Optional, List, Tuple
+from pathlib import Path
 
 from hydra.core.config_store import ConfigStore
 
@@ -92,6 +93,10 @@ class OptimConf:
     # method. See the Nevergrad documentation for more information.
     # https://facebookresearch.github.io/nevergrad/optimizers_ref.html#nevergrad.optimizers.base.Optimizer.register_callback
     callbacks: List[CallbackConfigSpec] = field(default_factory=list)
+
+    # Load an existing study and resume it. This is the path to the saved optimizer 
+    # pickle. You can pickle the optimizer via the OptimizerDump callback.
+    load_if_exists: Optional[Path] = None
 
 @dataclass
 class NevergradSweeperConf:

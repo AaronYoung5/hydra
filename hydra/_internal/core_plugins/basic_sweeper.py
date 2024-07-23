@@ -44,7 +44,7 @@ class BasicSweeperConf:
     _target_: str = "hydra._internal.core_plugins.basic_sweeper.BasicSweeper"
     params: Optional[Dict[str, str]] = None
 
-    optim: Optional[OptimConf] = None
+    optim: Optional[Dict[Any, Any]] = None
 
 
 ConfigStore.instance().store(

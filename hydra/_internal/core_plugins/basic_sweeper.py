@@ -20,7 +20,7 @@ import itertools
 import logging
 import time
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
@@ -44,7 +44,7 @@ class BasicSweeperConf:
     _target_: str = "hydra._internal.core_plugins.basic_sweeper.BasicSweeper"
     params: Optional[Dict[str, str]] = None
 
-    optim: Optional[Dict[Any, Any]] = None
+    optim: Dict[Any, Any] = field(default_factory=lambda: {"max_batch_size": None})
 
 
 ConfigStore.instance().store(

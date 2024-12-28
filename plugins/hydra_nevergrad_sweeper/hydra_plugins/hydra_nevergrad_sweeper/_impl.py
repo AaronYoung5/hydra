@@ -111,7 +111,7 @@ class NevergradSweeperImpl(Sweeper):
             []
         )
         if optim.cheap_constraints is not None:
-            for constraint in optim.cheap_constraints:
+            for constraint in optim.cheap_constraints.values():
                 self.cheap_constraints.append(constraint)
         self.job_idx: Optional[int] = None
 
@@ -170,7 +170,7 @@ class NevergradSweeperImpl(Sweeper):
         else:
             log.info(f"Initializing optimizer from scratch with budget={remaining_budget}")
             optimizer = ng.optimizers.registry[opt](params, remaining_budget, nw)
-        for callback_spec in self.opt_config.callbacks:
+        for callback_spec in self.opt_config.callbacks.values():
             optimizer.register_callback(callback_spec.name, callback_spec.callback)
         # loop!
         all_returns: List[Any] = []

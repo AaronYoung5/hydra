@@ -100,10 +100,10 @@ class NevergradSweeperImpl(Sweeper):
         self.launcher: Optional[Launcher] = None
         self.hydra_context: Optional[HydraContext] = None
         self.job_results = None
-        self.params: Dict[str, Any] = {}
+        self.parameterization: Dict[str, Any] = {}
         if parametrization is not None:
             assert isinstance(parametrization, DictConfig)
-            self.params = {
+            self.parameterization = {
                 str(x): create_nevergrad_param_from_config(y)
                 for x, y in parametrization.items()
             }
@@ -135,8 +135,8 @@ class NevergradSweeperImpl(Sweeper):
         assert self.job_idx is not None
         direction = -1 if self.opt_config.maximize else 1
         name = "maximization" if self.opt_config.maximize else "minimization"
-        # Override the params from commandline
-        params = dict(self.params)
+        # Override the parameterization from commandline
+        params = dict(self.parameterization)
 
         parser = OverridesParser.create()
         parsed = parser.parse_overrides(arguments)
@@ -147,11 +147,11 @@ class NevergradSweeperImpl(Sweeper):
             params[override_key] = create_nevergrad_parameter_from_override(override)
             params_overrides.append(override_key)
 
-        params = ng.p.Dict(**params)
+        parameterization = ng.p.Dict(**params)
         for constraint in self.cheap_constraints:
             params.register_cheap_constraint(constraint)
-        params.function.deterministic = not self.opt_config.noisy
-        params.random_state.seed(self.opt_config.seed)
+        parameterization.function.deterministic = not self.opt_config.noisy
+        parameterization.random_state.seed(self.opt_config.seed)
         # log and build the optimizer
         opt = self.opt_config.optimizer
         remaining_budget = self.opt_config.budget
@@ -160,7 +160,7 @@ class NevergradSweeperImpl(Sweeper):
             f"NevergradSweeper(optimizer={opt}, budget={remaining_budget}, "
             f"num_workers={nw}) {name}"
         )
-        log.info(f"with parameterization {params}")
+        log.info(f"with parameterization {parameterization}")
         log.info(f"Sweep output dir: {self.config.hydra.sweep.dir}")
         if self.opt_config.load_if_exists is not None and self.opt_config.load_if_exists.exists():
             optimizer = ng.optimizers.registry[opt].load(self.opt_config.load_if_exists)
@@ -169,12 +169,12 @@ class NevergradSweeperImpl(Sweeper):
             self.job_idx = optimizer.num_ask
         else:
             log.info(f"Initializing optimizer from scratch with budget={remaining_budget}")
-            optimizer = ng.optimizers.registry[opt](params, remaining_budget, nw)
+            optimizer = ng.optimizers.registry[opt](parameterization, remaining_budget, nw)
         for callback_spec in self.opt_config.callbacks.values():
             optimizer.register_callback(callback_spec.name, callback_spec.callback)
         # loop!
         all_returns: List[Any] = []
-        best: Tuple[float, ng.p.Parameter] = (float("inf"), params)
+        best: Tuple[float, ng.p.Parameter] = (float("inf"), parameterization)
         while remaining_budget > 0:
             batch = min(nw, remaining_budget)
             remaining_budget -= batch

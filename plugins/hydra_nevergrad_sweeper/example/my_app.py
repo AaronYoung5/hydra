@@ -13,13 +13,15 @@ def dummy_training(cfg: DictConfig) -> float:
     Minimum is 0.0 at:
     lr = 0.12, dropout=0.33, db=mnist, batch_size=4
     """
+    print(cfg.arr)
+    print(sum(cfg.arr))
     do = cfg.dropout
     bs = cfg.batch_size
     out = float(
-        abs(do - 0.33) + int(cfg.db == "mnist") + abs(cfg.lr - 0.12) + abs(bs - 4)
+        abs(do - 0.33) + int(cfg.db == "mnist") + abs(cfg.lr - 0.12) + abs(bs - 4) + sum(cfg.arr)
     )
     log.info(
-        f"dummy_training(dropout={do:.3f}, lr={cfg.lr:.3f}, db={cfg.db}, batch_size={bs}) = {out:.3f}",
+        f"dummy_training(dropout={do:.3f}, lr={cfg.lr:.3f}, db={cfg.db}, batch_size={bs}, arr={cfg.arr}) = {out:.3f}",
     )
     if cfg.error:
         raise RuntimeError("cfg.error is True")

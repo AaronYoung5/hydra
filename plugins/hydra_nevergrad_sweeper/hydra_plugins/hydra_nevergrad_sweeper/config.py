@@ -5,7 +5,13 @@ from pathlib import Path
 
 from hydra.core.config_store import ConfigStore
 
-CheapConstraintFn: TypeAlias = Callable[[Dict[str, Any]], Union[bool, float]]
+
+CheapConstraintFn: TypeAlias = Any 
+"""A cheap function that can be used to prune bad candidates early.
+See https://facebookresearch.github.io/nevergrad/\
+    optimization.html#optimization-with-constraints for more details.
+Actual type: Callable[[Dict[str, Any]], Union[bool, float]]
+"""
 
 @dataclass
 class ScalarOrArrayConfigSpec:
@@ -32,7 +38,6 @@ class ScalarOrArrayConfigSpec:
     integer: bool = False
 
     # logarithmically distributed
-    # unused if array
     log: bool = False
 
     # shape of the array

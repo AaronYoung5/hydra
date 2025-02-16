@@ -28,7 +28,7 @@ from hydra.plugins.sweeper import Sweeper
 from hydra.types import HydraContext, TaskFunction
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-from .config import OptimConf, ScalarOrArrayConfigSpec
+from .config import OptimConf, ScalarOrArrayConfigSpec, CheapConstraintFn
 
 log = logging.getLogger(__name__)
 
@@ -107,9 +107,7 @@ class NevergradSweeperImpl(Sweeper):
                 str(x): create_nevergrad_param_from_config(y)
                 for x, y in parameterization.items()
             }
-        self.cheap_constraints: List[Callable[[Dict[str, Any], Union[bool, float]]]] = (
-            []
-        )
+        self.cheap_constraints: List[CheapConstraintFn] = []
         if optim.cheap_constraints is not None:
             for constraint in optim.cheap_constraints.values():
                 self.cheap_constraints.append(constraint)
@@ -147,10 +145,10 @@ class NevergradSweeperImpl(Sweeper):
             )
 
         parameterization = ng.p.Dict(**params)
-        for constraint in self.cheap_constraints:
-            params.register_cheap_constraint(constraint)
         parameterization.function.deterministic = not self.opt_config.noisy
         parameterization.random_state.seed(self.opt_config.seed)
+        for constraint in self.cheap_constraints:
+            parameterization.register_cheap_constraint(constraint)
         # log and build the optimizer
         opt = self.opt_config.optimizer
         remaining_budget = self.opt_config.budget
@@ -179,11 +177,7 @@ class NevergradSweeperImpl(Sweeper):
             remaining_budget -= batch
             candidates = [optimizer.ask() for _ in range(batch)]
             overrides = list(
-                tuple(
-                    f"{x}={y.tolist() if type(y).__name__ == 'ndarray' else y}"
-                    for x, y in c.value.items()
-                )
-                for c in candidates
+                tuple(f"{x}={y}" for x, y in c.value.items()) for c in candidates
             )
             self.validate_batch_is_legal(overrides)
             returns = self.launcher.launch(overrides, initial_job_idx=self.job_idx)

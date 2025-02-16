@@ -1,10 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple, TypeAlias, Union, Callable
 from pathlib import Path
 
 from hydra.core.config_store import ConfigStore
 
+CheapConstraintFn: TypeAlias = Callable[[Dict[str, Any]], Union[bool, float]]
 
 @dataclass
 class ScalarOrArrayConfigSpec:
@@ -87,7 +88,7 @@ class OptimConf:
     # Callable[[Dict[str, Any]], float | bool]. The input dict is the parameterization 
     # of the trial.
     # https://facebookresearch.github.io/nevergrad/optimization.html#optimization-with-constraints
-    cheap_constraints: Dict[str, Any] = field(default_factory=dict)
+    cheap_constraints: Dict[str, CheapConstraintFn] = field(default_factory=dict)
 
     # These are callbacks that are passed to the optimizer via the `register_callback`
     # method. See the Nevergrad documentation for more information.

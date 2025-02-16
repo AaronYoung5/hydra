@@ -93,7 +93,7 @@ class NevergradSweeperImpl(Sweeper):
     def __init__(
         self,
         optim: OptimConf,
-        parametrization: Optional[DictConfig]
+        parameterization: Optional[DictConfig],
     ):
         self.opt_config = optim
         self.config: Optional[DictConfig] = None
@@ -101,11 +101,11 @@ class NevergradSweeperImpl(Sweeper):
         self.hydra_context: Optional[HydraContext] = None
         self.job_results = None
         self.parameterization: Dict[str, Any] = {}
-        if parametrization is not None:
-            assert isinstance(parametrization, DictConfig)
+        if parameterization is not None:
+            assert isinstance(parameterization, DictConfig)
             self.parameterization = {
                 str(x): create_nevergrad_param_from_config(y)
-                for x, y in parametrization.items()
+                for x, y in parameterization.items()
             }
         self.cheap_constraints: List[Callable[[Dict[str, Any], Union[bool, float]]]] = (
             []

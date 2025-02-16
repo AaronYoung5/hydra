@@ -141,11 +141,10 @@ class NevergradSweeperImpl(Sweeper):
         parser = OverridesParser.create()
         parsed = parser.parse_overrides(arguments)
 
-        params_overrides = []
         for override in parsed:
-            override_key = override.get_key_element()
-            params[override_key] = create_nevergrad_parameter_from_override(override)
-            params_overrides.append(override_key)
+            params[override.get_key_element()] = (
+                create_nevergrad_parameter_from_override(override)
+            )
 
         parameterization = ng.p.Dict(**params)
         for constraint in self.cheap_constraints:
